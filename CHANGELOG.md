@@ -6,6 +6,21 @@ All notable changes to AegisAI are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- SEC002/LLM003 false positives: a secret passed to a request, query, command or arbitrary
+  helper no longer taints the call's result (e.g. logging `resp.status_code` after
+  `requests.post(data={"password": ...})`). Encoding/formatting calls still propagate.
+- Descriptive names such as `token_url`, `password_field` or `api_key_header` are no longer
+  treated as secret values by the dataflow analyzer.
+- External scanner findings (Gitleaks, Semgrep) now honour `scan.exclude`.
+- `pyproject.toml` is no longer passed to OSV-Scanner as a lockfile (it has no extractor).
+- SARIF rule tags are deduplicated; GitHub code scanning rejected duplicates.
+- Path-like values (`bin/secretlint.js`) are no longer reported as hard-coded secrets.
+- AGT003 description findings anchor to the function signature instead of the whole body.
+
+### Changed
+- `github/codeql-action/upload-sarif` pinned to v4 in the workflows.
+
 ## [0.1.0] - 2026-10-23
 
 Initial MVP release.

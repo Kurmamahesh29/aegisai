@@ -72,6 +72,40 @@ DANGEROUS_SINKS: frozenset[SinkKind] = frozenset(
 )
 
 
+# Sinks whose return value is produced by the external system (response, rows, output) and
+# therefore does not carry the taint of the arguments that were sent to it.
+FRESH_RESULT_SINKS: frozenset[SinkKind] = frozenset(
+    {
+        SinkKind.NETWORK_REQUEST,
+        SinkKind.SQL_EXEC,
+        SinkKind.SHELL_EXEC,
+        SinkKind.FILE_PATH,
+        SinkKind.LOGGING,
+        SinkKind.HTTP_RESPONSE,
+        SinkKind.REDIRECT,
+    }
+)
+
+# Functions whose result is a transformation of their input, so secrets stay secret.
+ENCODING_FUNCS: frozenset[str] = frozenset(
+    {
+        "str",
+        "bytes",
+        "repr",
+        "base64.b64encode",
+        "base64.b64decode",
+        "base64.urlsafe_b64encode",
+        "base64.encodebytes",
+        "json.dumps",
+        "urllib.parse.quote",
+        "urllib.parse.quote_plus",
+        "urllib.parse.urlencode",
+        "binascii.hexlify",
+    }
+)
+ENCODING_TAILS: frozenset[str] = frozenset({"format", "join", "encode", "decode", "hex"})
+
+
 class FunctionRole(StrEnum):
     MODULE = "module"
     OTHER = "other"
@@ -202,7 +236,10 @@ SECRET_NAME_EXCLUDE = re.compile(
     r"secret_path|password_hash|hashed_password|password_field|token_budget|input_tokens|"
     r"output_tokens|total_tokens|prompt_tokens|completion_tokens|tokens$|key_id|keyword|"
     r"api_key_header|api_key_name|key_file|token_ids|token_len|tokenize|_tokens_|"
-    r"credential_type|credentials_file|secret_arn|secret_version)"
+    r"credential_type|credentials_file|secret_arn|secret_version|"
+    # Names that describe where/how a secret is used rather than the secret itself.
+    r"_(?:url|uri|endpoint|path|file|name|id|type|header|field|len|length|count|size|ttl|"
+    r"expiry|expires|lifetime|format|version|label|prefix|param|key_name|env|var)$)"
 )
 
 
@@ -1413,7 +1450,9 @@ class _FunctionAnalyzer:
                         )
             return frozenset()
 
-        self._check_sinks(node, name, tail, resolved_receiver, arg_taints, receiver_taints)
+        matched_sinks = self._check_sinks(
+            node, name, tail, resolved_receiver, arg_taints, receiver_taints
+        )
 
         source = self._match_source_call(node, name, tail, resolved_receiver, arg_taints)
         if source is not None:
@@ -1422,7 +1461,18 @@ class _FunctionAnalyzer:
         if tail == "get" and isinstance(node.func, ast.Attribute) and not receiver_taints:
             # ``TABLE.get(key)`` yields a value from an untainted container.
             return frozenset()
-        return receiver_taints | all_taints
+        if matched_sinks & FRESH_RESULT_SINKS:
+            # The result of a request, query, command or file operation is data produced by
+            # the external system, not the argument that was sent to it.
+            return receiver_taints
+        if name in ENCODING_FUNCS or tail in ENCODING_TAILS:
+            return receiver_taints | all_taints
+        # A secret passed to an arbitrary function does not make the function's result a
+        # secret (``login(password)`` returns a session, not the password). Other taint kinds
+        # stay conservative because helpers commonly return a transformed input.
+        return receiver_taints | frozenset(
+            t for t in all_taints if t.kind is not SourceKind.SECRET_VALUE
+        )
 
     # -- sources -------------------------------------------------------------------
 
@@ -1554,7 +1604,10 @@ class _FunctionAnalyzer:
         receiver: str | None,
         arg_taints: list[tuple[str, ast.expr, frozenset[Taint]]],
         receiver_taints: frozenset[Taint],
-    ) -> None:
+    ) -> set[SinkKind]:
+        """Record sinks/flows for this call and return the sink kinds that matched."""
+        matched: set[SinkKind] = set()
+
         def selected(labels: tuple[str, ...]) -> list[tuple[str, ast.expr, frozenset[Taint]]]:
             return [(label, expr, taints) for label, expr, taints in arg_taints if label in labels]
 
@@ -1568,6 +1621,7 @@ class _FunctionAnalyzer:
             shell: bool = False,
             callee: str | None = None,
         ) -> None:
+            matched.add(kind)
             for label, expr, taints in items:
                 arg_form = _arg_form(expr, self)
                 sink = self._sink(
@@ -1609,7 +1663,7 @@ class _FunctionAnalyzer:
                     loader = node.args[1]
                 loader_name = dotted_name(loader) if loader is not None else ""
                 if "Safe" in loader_name or "safe" in loader_name:
-                    return
+                    return matched
             report(SinkKind.DESERIALIZATION, selected(("arg0", "data", "stream", "file", "f")))
         elif (
             name in _SQL_NAMES
@@ -1698,6 +1752,7 @@ class _FunctionAnalyzer:
             report(SinkKind.HTTP_RESPONSE, all_args())
         elif name in {"Path", "pathlib.Path"}:
             report(SinkKind.FILE_PATH, all_args())
+        return matched
 
     def _note_call_markers(self, name: str, tail: str, node: ast.Call) -> None:
         if AUTH_PATTERN.search(name) or AUTH_PATTERN.search(tail):

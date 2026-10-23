@@ -152,7 +152,7 @@ User-supplied text or content retrieved from a document store is passed directly
 
 ### LLM003 - Secret value embedded in a prompt
 
-*Version 1.0.0 | pack `llm` | category `llm`*
+*Version 1.1.0 | pack `llm` | category `llm`*
 
 A credential (from the environment, a secrets manager, or a variable whose name indicates a secret) is interpolated into prompt text, a message object, or passed as prompt input to a model API. Prompts are transmitted to the provider, retained in traces, and can be exfiltrated through prompt injection.
 
@@ -321,7 +321,7 @@ A string literal that looks like an API key, token, password or private key is e
 
 ### SEC002 - Sensitive value exposed in logs
 
-*Version 1.0.0 | pack `code` | category `code`*
+*Version 1.1.0 | pack `code` | category `code`*
 
 A value read from a secret source (environment variable, secrets manager, or a variable whose name indicates a credential) is passed to a logging or print call. Logs are widely replicated and rarely protected like secrets.
 

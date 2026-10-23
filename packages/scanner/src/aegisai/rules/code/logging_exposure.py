@@ -13,7 +13,7 @@ class SensitiveLoggingRule(Rule):
     metadata = RuleMetadata(
         rule_id="SEC002",
         name="Sensitive value exposed in logs",
-        version="1.0.0",
+        version="1.1.0",
         description=(
             "A value read from a secret source (environment variable, secrets manager, or a "
             "variable whose name indicates a credential) is passed to a logging or print call. "

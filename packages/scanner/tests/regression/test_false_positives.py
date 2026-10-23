@@ -132,3 +132,36 @@ def test_path_like_values_are_not_secrets(project) -> None:
     )
     result = scan_dir(root, profiles=[Profile.SECRETS])
     assert rule_ids(result) == set(), [f.evidence_summary for f in result.findings]
+
+
+def test_logging_response_of_authenticated_request_is_not_sec002(project) -> None:
+    """Real-world FP: password -> request body -> response -> status_code -> print()."""
+    code = """
+        import requests
+        import xml.etree.ElementTree as ET
+
+        def sf_authenticate(sf_cfg):
+            password = sf_cfg["password"]
+            client_secret = sf_cfg["client_secret"]
+            token_url = sf_cfg["token_url"]
+            data = {"grant_type": "password", "password": password, "client_secret": client_secret}
+            resp = requests.post(token_url, data=data, timeout=30)
+            if resp.status_code != 200:
+                print(f"[Auth] OAuth2 password flow failed ({resp.status_code}), falling back")
+            return resp.json()["access_token"]
+
+        def create_bulk_job(access_token, operation):
+            headers = {"Authorization": f"Bearer {access_token}"}
+            resp = requests.post("https://x/jobs", headers=headers, json={"operation": operation})
+            job_id = resp.json()["id"]
+            print(f" [Bulk] Job created: {job_id} (op={operation})")
+            return job_id
+
+        def _soap_login(username, password, security_token):
+            body = f"<login><u>{username}</u><p>{password}{security_token}</p></login>"
+            resp = requests.post("https://login/soap", data=body)
+            root = ET.fromstring(resp.text)
+            server_url = root.find("serverUrl").text
+            print(f"[Auth] SOAP login succeeded. Instance: {server_url}")
+    """
+    assert "SEC002" not in rule_ids(scan_code(project, code, profiles=[Profile.CODE]))

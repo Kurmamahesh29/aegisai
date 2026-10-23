@@ -262,3 +262,46 @@ def test_rule_errors_do_not_occur_on_odd_syntax() -> None:
         """
     )
     assert result.functions
+
+
+def test_secret_does_not_survive_request_or_helper_calls() -> None:
+    """A response/status code/session derived from a call that received a secret is not a secret."""
+    result = analyze(
+        """
+        import os, requests
+
+        def auth(cfg):
+            password = cfg["password"]
+            token_url = cfg["token_url"]
+            data = {"password": password}
+            resp = requests.post(token_url, data=data)
+            print(resp.status_code)
+            session = login(password)
+            print(session.id)
+            print(token_url)
+        """
+    )
+    assert result.flows_matching({SourceKind.SECRET_VALUE}, {SinkKind.LOGGING}) == []
+
+
+def test_secret_survives_encoding_and_formatting() -> None:
+    result = analyze(
+        """
+        import base64, os, logging
+        log = logging.getLogger()
+
+        def go():
+            token = os.environ["API_TOKEN"]
+            log.info("Bearer {}".format(token))
+            log.info(base64.b64encode(token.encode()))
+            log.info(" ".join(["key", token]))
+        """
+    )
+    assert len(result.flows_matching({SourceKind.SECRET_VALUE}, {SinkKind.LOGGING})) == 3
+
+
+def test_descriptive_secret_names_are_not_secrets() -> None:
+    for name in ("token_url", "password_field", "api_key_header", "secret_path", "token_count"):
+        assert not is_secret_name(name), name
+    for name in ("access_token", "client_secret", "db_password", "api_key"):
+        assert is_secret_name(name), name

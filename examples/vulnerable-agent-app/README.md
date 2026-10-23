@@ -7,7 +7,7 @@ Expected findings (`aegisai scan examples/vulnerable-agent-app --no-integrations
 | Rule | Location | Why |
 |------|----------|-----|
 | AGT001 | `run_command()` | tool parameter reaches `subprocess.check_output(shell=True)` |
-| AGT001 | `load_report()` | tool parameter reaches `open()` and `pickle.load()` |
+| AGT001 | `load_report()` | tool parameter reaches `open()` (the file *contents* fed to `pickle.load()` are not treated as the path's taint) |
 | AGT002 | `delete_customer()` | destructive tool without an approval boundary |
 | AGT003 | module level | `ShellTool()`, `load_tools(["terminal", "requests_all"])`, `allow_dangerous_code=True` |
 | AGT003 | `run_command()` | description advertises "any shell command" |

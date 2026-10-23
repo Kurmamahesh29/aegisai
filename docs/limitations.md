@@ -63,7 +63,7 @@ This page lists what the 0.1.0 release cannot do, what it gets wrong, and how it
 |---------|----------|-------------|------------------------|
 | vulnerable-llm-app | 9 | CFG001, LLM001, LLM003, LLM004 (3), SEC001, SEC002, SEC003 | none |
 | vulnerable-rag-app | 8 | RAG001, RAG002, RAG003 (2), RAG004 (4) | none |
-| vulnerable-agent-app | 14 | AGT001 (5), AGT002 (3), AGT003 (4), AGT004, LLM002 | none |
+| vulnerable-agent-app | 13 | AGT001 (4), AGT002 (3), AGT003 (4), AGT004, LLM002 | none |
 | vulnerable-mcp-server | 18 | MCP001 (3), MCP002 (6), MCP003 (3), MCP004 (3), MCP005 (3) | none |
 | secure-examples | 0 | - | 0 false positives |
 

@@ -13,7 +13,7 @@ class SecretsInPromptsRule(Rule):
     metadata = RuleMetadata(
         rule_id="LLM003",
         name="Secret value embedded in a prompt",
-        version="1.0.0",
+        version="1.1.0",
         description=(
             "A credential (from the environment, a secrets manager, or a variable whose name "
             "indicates a secret) is interpolated into prompt text, a message object, or passed as "
