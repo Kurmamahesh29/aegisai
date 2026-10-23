@@ -64,9 +64,23 @@ jobs:
         with:
           name: release-artifacts
           path: artifacts
+      - name: Extract release notes for this version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Lines between "## [<version>]" and the next "## [" heading.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on=1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No changelog section found for ${version}; using a generic note."
+            echo "See CHANGELOG.md for details." > release-notes.md
+          fi
+          cat release-notes.md
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" --title "AegisAI ${GITHUB_REF_NAME}" --notes-file CHANGELOG.md \
+          gh release create "${GITHUB_REF_NAME}" --title "AegisAI ${GITHUB_REF_NAME}" --notes-file release-notes.md \
             artifacts/packages/scanner/dist/* artifacts/apps/vscode-extension/*.vsix
