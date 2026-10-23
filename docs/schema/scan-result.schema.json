@@ -1,0 +1,838 @@
+{
+  "$defs": {
+    "AnalyzerResult": {
+      "additionalProperties": false,
+      "description": "Status record for each analyzer that was configured for the scan.",
+      "properties": {
+        "duration_ms": {
+          "default": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "files_processed": {
+          "default": 0,
+          "title": "Files Processed",
+          "type": "integer"
+        },
+        "findings_count": {
+          "default": 0,
+          "title": "Findings Count",
+          "type": "integer"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": false,
+          "description": "If True, a non-completed status makes the scan incomplete.",
+          "title": "Required",
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/AnalyzerStatus"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "name",
+        "status"
+      ],
+      "title": "AnalyzerResult",
+      "type": "object"
+    },
+    "AnalyzerStatus": {
+      "description": "Outcome of a single analyzer (built-in or external).",
+      "enum": [
+        "completed",
+        "disabled",
+        "skipped",
+        "unavailable",
+        "failed",
+        "timed_out"
+      ],
+      "title": "AnalyzerStatus",
+      "type": "string"
+    },
+    "BaselineSummary": {
+      "additionalProperties": false,
+      "description": "Comparison against a baseline file.",
+      "properties": {
+        "baseline_path": {
+          "title": "Baseline Path",
+          "type": "string"
+        },
+        "existing": {
+          "default": 0,
+          "title": "Existing",
+          "type": "integer"
+        },
+        "new": {
+          "default": 0,
+          "title": "New",
+          "type": "integer"
+        },
+        "resolved": {
+          "default": 0,
+          "title": "Resolved",
+          "type": "integer"
+        },
+        "resolved_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resolved Fingerprints",
+          "type": "array"
+        }
+      },
+      "required": [
+        "baseline_path"
+      ],
+      "title": "BaselineSummary",
+      "type": "object"
+    },
+    "Category": {
+      "description": "High-level finding categories used for grouping and profiles.",
+      "enum": [
+        "code",
+        "secrets",
+        "dependencies",
+        "configuration",
+        "llm",
+        "agents",
+        "rag",
+        "mcp"
+      ],
+      "title": "Category",
+      "type": "string"
+    },
+    "Confidence": {
+      "description": "How confident the analyzer is that the finding is a true positive.",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "description": "A single piece of evidence supporting a finding.",
+      "properties": {
+        "column": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Evidence kind, e.g. 'source', 'sink', 'line', 'config_key'.",
+          "title": "Kind",
+          "type": "string"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line"
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Redacted code or config excerpt.",
+          "title": "Snippet"
+        }
+      },
+      "required": [
+        "kind",
+        "description"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "description": "Normalized security finding.",
+      "properties": {
+        "analyzer": {
+          "description": "Analyzer that produced the finding (e.g. 'python_ast').",
+          "title": "Analyzer",
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/Category"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "cwe_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cwe Ids",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "evidence_summary": {
+          "description": "One-line, redacted description of the evidence.",
+          "title": "Evidence Summary",
+          "type": "string"
+        },
+        "finding_id": {
+          "description": "Unique id within a scan result.",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "fingerprint": {
+          "description": "Stable identity across scans.",
+          "minLength": 16,
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "first_seen": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set from the baseline when the finding already existed.",
+          "title": "First Seen"
+        },
+        "impact": {
+          "title": "Impact",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/Location"
+        },
+        "owasp_references": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Owasp References",
+          "type": "array"
+        },
+        "references": {
+          "items": {
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "remediation": {
+          "title": "Remediation",
+          "type": "string"
+        },
+        "review_required": {
+          "default": false,
+          "description": "True for heuristic findings that need human confirmation.",
+          "title": "Review Required",
+          "type": "boolean"
+        },
+        "rule_id": {
+          "pattern": "^[A-Z]{3,4}[0-9]{3}$",
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "status": {
+          "$ref": "#/$defs/FindingStatus",
+          "default": "new"
+        },
+        "suppression": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SuppressionInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id",
+        "rule_id",
+        "rule_version",
+        "title",
+        "description",
+        "category",
+        "severity",
+        "confidence",
+        "location",
+        "evidence_summary",
+        "impact",
+        "remediation",
+        "analyzer",
+        "fingerprint"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "FindingStatus": {
+      "description": "Lifecycle status relative to a baseline and suppressions.",
+      "enum": [
+        "new",
+        "existing",
+        "suppressed"
+      ],
+      "title": "FindingStatus",
+      "type": "string"
+    },
+    "Location": {
+      "additionalProperties": false,
+      "description": "Source location. Lines and columns are 1-based; ``end_*`` are inclusive.",
+      "properties": {
+        "end_column": {
+          "default": 1,
+          "minimum": 1,
+          "title": "End Column",
+          "type": "integer"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "file_path": {
+          "description": "Path relative to the scan root, POSIX separators.",
+          "title": "File Path",
+          "type": "string"
+        },
+        "start_column": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Start Column",
+          "type": "integer"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_path",
+        "start_line",
+        "end_line"
+      ],
+      "title": "Location",
+      "type": "object"
+    },
+    "RuleExecutionError": {
+      "additionalProperties": false,
+      "description": "An exception raised by a rule for a specific file (recorded, never swallowed).",
+      "properties": {
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "file_path": {
+          "title": "File Path",
+          "type": "string"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "file_path",
+        "error"
+      ],
+      "title": "RuleExecutionError",
+      "type": "object"
+    },
+    "ScanMetadata": {
+      "additionalProperties": false,
+      "description": "Information about the scan invocation.",
+      "properties": {
+        "baseline_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline Path"
+        },
+        "command_line": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Command Line",
+          "type": "array"
+        },
+        "config_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Path"
+        },
+        "duration_ms": {
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "finished_at": {
+          "format": "date-time",
+          "title": "Finished At",
+          "type": "string"
+        },
+        "frameworks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Frameworks",
+          "type": "array"
+        },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "profiles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Profiles",
+          "type": "array"
+        },
+        "root": {
+          "description": "Absolute path of the scanned project root.",
+          "title": "Root",
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "tool_name": {
+          "default": "AegisAI",
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "tool_version": {
+          "title": "Tool Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_version",
+        "started_at",
+        "finished_at",
+        "duration_ms",
+        "root",
+        "profiles"
+      ],
+      "title": "ScanMetadata",
+      "type": "object"
+    },
+    "ScanStatus": {
+      "description": "Overall scan outcome. Findings are reported separately in the summary.",
+      "enum": [
+        "success",
+        "success_with_warnings",
+        "incomplete",
+        "failed",
+        "cancelled"
+      ],
+      "title": "ScanStatus",
+      "type": "string"
+    },
+    "ScanSummary": {
+      "additionalProperties": false,
+      "description": "Counts used by reporters and for the CI exit code.",
+      "properties": {
+        "active_findings": {
+          "default": 0,
+          "description": "Findings not suppressed.",
+          "title": "Active Findings",
+          "type": "integer"
+        },
+        "by_category": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "By Category",
+          "type": "object"
+        },
+        "by_rule": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "By Rule",
+          "type": "object"
+        },
+        "by_severity": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/Severity"
+          },
+          "title": "By Severity",
+          "type": "object"
+        },
+        "exit_code": {
+          "default": 0,
+          "title": "Exit Code",
+          "type": "integer"
+        },
+        "fail_on": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Severity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "files_discovered": {
+          "default": 0,
+          "title": "Files Discovered",
+          "type": "integer"
+        },
+        "files_scanned": {
+          "default": 0,
+          "title": "Files Scanned",
+          "type": "integer"
+        },
+        "files_skipped": {
+          "default": 0,
+          "title": "Files Skipped",
+          "type": "integer"
+        },
+        "filtered_below_threshold": {
+          "default": 0,
+          "description": "Findings hidden by the --severity reporting filter.",
+          "title": "Filtered Below Threshold",
+          "type": "integer"
+        },
+        "rules_executed": {
+          "default": 0,
+          "title": "Rules Executed",
+          "type": "integer"
+        },
+        "rules_skipped": {
+          "default": 0,
+          "title": "Rules Skipped",
+          "type": "integer"
+        },
+        "suppressed_findings": {
+          "default": 0,
+          "title": "Suppressed Findings",
+          "type": "integer"
+        },
+        "threshold_reached": {
+          "default": false,
+          "title": "Threshold Reached",
+          "type": "boolean"
+        },
+        "total_findings": {
+          "default": 0,
+          "title": "Total Findings",
+          "type": "integer"
+        }
+      },
+      "title": "ScanSummary",
+      "type": "object"
+    },
+    "ScanWarning": {
+      "additionalProperties": false,
+      "description": "A non-fatal problem encountered while scanning.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "file_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File Path"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "ScanWarning",
+      "type": "object"
+    },
+    "Severity": {
+      "description": "Documented severity taxonomy, ordered from most to least severe.",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "informational"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "SkippedRule": {
+      "additionalProperties": false,
+      "description": "A rule that did not run, with the reason.",
+      "properties": {
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "reason"
+      ],
+      "title": "SkippedRule",
+      "type": "object"
+    },
+    "SuppressionInfo": {
+      "additionalProperties": false,
+      "description": "Why and by which mechanism a finding was suppressed.",
+      "properties": {
+        "expired": {
+          "default": false,
+          "title": "Expired",
+          "type": "boolean"
+        },
+        "expires": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires"
+        },
+        "matched_by": {
+          "description": "What matched: 'fingerprint', 'rule_id+path', or 'inline'.",
+          "title": "Matched By",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "source": {
+          "description": "'inline' or 'config'.",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "reason",
+        "matched_by"
+      ],
+      "title": "SuppressionInfo",
+      "type": "object"
+    }
+  },
+  "$id": "https://aegisai.dev/schema/scan-result-1.0.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Top-level scan output. Serialized as-is for the JSON report.",
+  "properties": {
+    "analyzers": {
+      "items": {
+        "$ref": "#/$defs/AnalyzerResult"
+      },
+      "title": "Analyzers",
+      "type": "array"
+    },
+    "baseline": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BaselineSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "errors": {
+      "items": {
+        "$ref": "#/$defs/RuleExecutionError"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ScanMetadata"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "skipped_rules": {
+      "items": {
+        "$ref": "#/$defs/SkippedRule"
+      },
+      "title": "Skipped Rules",
+      "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/ScanStatus"
+    },
+    "status_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Why the status is not SUCCESS, when applicable.",
+      "title": "Status Reason"
+    },
+    "summary": {
+      "$ref": "#/$defs/ScanSummary"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/ScanWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "status",
+    "metadata",
+    "summary"
+  ],
+  "title": "AegisAI scan result",
+  "type": "object"
+}

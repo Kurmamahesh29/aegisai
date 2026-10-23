@@ -1,0 +1,210 @@
+{
+  "name": "aegisai-security",
+  "displayName": "AegisAI Security",
+  "description": "Security scanner for LLM, RAG, agent and MCP applications. Runs the local AegisAI CLI and shows findings inline.",
+  "version": "0.1.0",
+  "publisher": "aegisai",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aegisai/aegisai"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "security",
+    "llm",
+    "mcp",
+    "rag",
+    "agents",
+    "sast"
+  ],
+  "activationEvents": [
+    "workspaceContains:.aegisai.yaml"
+  ],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aegisai.scanWorkspace",
+        "title": "AegisAI: Scan Workspace",
+        "icon": "$(play)"
+      },
+      {
+        "command": "aegisai.scanFolder",
+        "title": "AegisAI: Scan Folder..."
+      },
+      {
+        "command": "aegisai.cancelScan",
+        "title": "AegisAI: Cancel Scan",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "aegisai.filterSeverity",
+        "title": "AegisAI: Filter Findings by Severity",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "aegisai.clearFindings",
+        "title": "AegisAI: Clear Findings",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "aegisai.openJsonReport",
+        "title": "AegisAI: Open JSON Report"
+      },
+      {
+        "command": "aegisai.openSarifReport",
+        "title": "AegisAI: Open SARIF Report"
+      },
+      {
+        "command": "aegisai.showOutput",
+        "title": "AegisAI: Show Scanner Output"
+      },
+      {
+        "command": "aegisai.showFinding",
+        "title": "AegisAI: Show Finding Details"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aegisai",
+          "title": "AegisAI",
+          "icon": "$(shield)"
+        }
+      ]
+    },
+    "views": {
+      "aegisai": [
+        {
+          "id": "aegisai.findings",
+          "name": "Findings",
+          "icon": "$(shield)",
+          "contextualTitle": "AegisAI findings"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "aegisai.findings",
+        "contents": "No scan results yet.\n[Scan Workspace](command:aegisai.scanWorkspace)\n\nAegisAI runs the local `aegisai` CLI (`pip install aegisai`). Configure the executable path under Settings > AegisAI."
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "aegisai.scanWorkspace",
+          "when": "view == aegisai.findings && !aegisai.scanning",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aegisai.cancelScan",
+          "when": "view == aegisai.findings && aegisai.scanning",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aegisai.filterSeverity",
+          "when": "view == aegisai.findings",
+          "group": "navigation@2"
+        },
+        {
+          "command": "aegisai.clearFindings",
+          "when": "view == aegisai.findings",
+          "group": "navigation@3"
+        },
+        {
+          "command": "aegisai.openJsonReport",
+          "when": "view == aegisai.findings",
+          "group": "reports@1"
+        },
+        {
+          "command": "aegisai.openSarifReport",
+          "when": "view == aegisai.findings",
+          "group": "reports@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "aegisai.showFinding",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AegisAI",
+      "properties": {
+        "aegisai.executablePath": {
+          "type": "string",
+          "default": "aegisai",
+          "markdownDescription": "Path to the `aegisai` executable. A bare name is resolved through PATH; anything containing a path separator must be an absolute path to an existing file."
+        },
+        "aegisai.pythonPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional Python interpreter. When set, the scanner is run as `<python> -m aegisai.cli` and `aegisai.executablePath` is ignored."
+        },
+        "aegisai.profile": {
+          "type": "string",
+          "enum": ["all", "ai", "llm", "agents", "rag", "mcp", "code", "secrets", "dependencies"],
+          "default": "all",
+          "description": "Scan profile."
+        },
+        "aegisai.severityThreshold": {
+          "type": "string",
+          "enum": ["informational", "low", "medium", "high", "critical"],
+          "default": "informational",
+          "description": "Only report findings at or above this severity."
+        },
+        "aegisai.exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional glob patterns to exclude (passed as --exclude)."
+        },
+        "aegisai.noIntegrations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run only built-in deterministic rules (skip gitleaks, osv-scanner, semgrep)."
+        },
+        "aegisai.timeoutSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 1,
+          "description": "Overall scan timeout passed to the CLI."
+        },
+        "aegisai.extraArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional CLI arguments appended to every scan (advanced)."
+        },
+        "aegisai.showSuppressedFindings": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show suppressed findings in the tree (they are never shown as diagnostics)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "tsc --noEmit -p ./",
+    "test": "npm run compile && node --test out/test/model.test.js",
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.5.0"
+  }
+}

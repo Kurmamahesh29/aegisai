@@ -1,0 +1,76 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: python ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: packages/scanner/pyproject.toml
+      - name: Install
+        run: python -m pip install -e "packages/scanner[dev]"
+      - name: Test
+        working-directory: packages/scanner
+        run: python -m pytest -q --cov=aegisai --cov-report=xml
+      - name: Fixture detection report
+        run: python scripts/measure_detection.py
+      - name: Smoke-test documented commands
+        shell: bash
+        run: |
+          aegisai version
+          aegisai rules list
+          aegisai rules show LLM001
+          aegisai scan examples/vulnerable-llm-app --no-integrations --no-progress --format json --output /tmp/report.json --quiet || test $? -eq 1
+          aegisai scan examples/secure-examples --no-integrations --no-progress --quiet
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        with:
+          name: coverage
+          path: packages/scanner/coverage.xml
+
+  extension:
+    name: vscode extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/vscode-extension/package-lock.json
+      - name: Install
+        working-directory: apps/vscode-extension
+        run: npm ci
+      - name: Compile and test
+        working-directory: apps/vscode-extension
+        run: |
+          npm run compile
+          npm test
+      - name: Package VSIX
+        working-directory: apps/vscode-extension
+        run: npm run package
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: vsix
+          path: apps/vscode-extension/*.vsix

@@ -1,0 +1,66 @@
+name: security
+
+# Self-scan of this repository with AegisAI plus dependency and secret scanning.
+# A failure here means either (a) a finding at or above the configured threshold, or
+# (b) scanner infrastructure failed (exit 2/3). The step summary distinguishes the two.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  self-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # required only for the SARIF upload step
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install AegisAI
+        run: python -m pip install -e "packages/scanner"
+      - name: Install external scanners
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.30.1
+          curl -sSL -o /tmp/gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          sudo install /tmp/gitleaks /usr/local/bin/gitleaks
+          OSV_VERSION=2.7.0
+          curl -sSL -o /tmp/osv-scanner "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64"
+          sudo install /tmp/osv-scanner /usr/local/bin/osv-scanner
+          aegisai doctor
+      - name: Scan
+        id: scan
+        run: |
+          set +e
+          aegisai scan . --strict --no-progress --format terminal --format json --format sarif \
+            --output .aegisai-reports/report.json --output .aegisai-reports/report.sarif
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          case $code in
+            0) echo "AegisAI: clean" >> "$GITHUB_STEP_SUMMARY" ;;
+            1) echo "AegisAI: findings at or above threshold (vulnerabilities)" >> "$GITHUB_STEP_SUMMARY" ;;
+            2) echo "AegisAI: scan FAILED (infrastructure/configuration error)" >> "$GITHUB_STEP_SUMMARY" ;;
+            3) echo "AegisAI: scan INCOMPLETE (a required scanner was unavailable or timed out)" >> "$GITHUB_STEP_SUMMARY" ;;
+          esac
+          exit $code
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: aegisai-reports
+          path: .aegisai-reports/
+      - name: Upload SARIF to code scanning
+        if: always() && steps.scan.outputs.exit_code != '2'
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
+        with:
+          sarif_file: .aegisai-reports/report.sarif
+          category: aegisai

@@ -1,0 +1,68 @@
+# Local Semgrep rules that complement AegisAI's AST analyzer.
+# Enable with:
+#   integrations:
+#     semgrep:
+#       enabled: true
+#       config: [rules/semgrep/python-ai-security.yaml]
+# AegisAI refuses registry references (p/..., auto) so only reviewed local rules run.
+rules:
+  - id: aegisai.python.langchain-dangerous-requests-flag
+    message: >-
+      allow_dangerous_requests=True lets the agent issue arbitrary HTTP requests. Scope the
+      toolkit to an allow-list of hosts or remove the flag.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      references:
+        - https://genai.owasp.org/llmrisk/llm062025-excessive-agency/
+    pattern: $TOOLKIT(..., allow_dangerous_requests=True, ...)
+
+  - id: aegisai.python.pickle-load-from-model-artifact
+    message: >-
+      pickle/torch.load of a file path that is not a constant can execute arbitrary code
+      when the artifact is attacker-controlled (model supply chain). Prefer safetensors or
+      weights_only=True.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: ["CWE-502: Deserialization of Untrusted Data"]
+      references:
+        - https://genai.owasp.org/llmrisk/llm032025-supply-chain/
+    patterns:
+      - pattern-either:
+          - pattern: pickle.load($F)
+          - pattern: pickle.loads($F)
+          - pattern: torch.load($F, ...)
+      - pattern-not: torch.load($F, ..., weights_only=True, ...)
+      - pattern-not: pickle.load("...")
+
+  - id: aegisai.python.openai-response-passed-to-exec
+    message: >-
+      Model output is executed with exec/eval. Treat model output as untrusted data.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: ["CWE-94: Improper Control of Generation of Code ('Code Injection')"]
+      references:
+        - https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/
+    patterns:
+      - pattern-either:
+          - pattern: exec($X.choices[0].message.content)
+          - pattern: eval($X.choices[0].message.content)
+          - pattern: exec($X.output_text)
+          - pattern: eval($X.output_text)
+
+  - id: aegisai.python.subprocess-shell-fstring
+    message: >-
+      subprocess with shell=True and an f-string command is a command injection sink unless
+      every interpolated value is strictly validated.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"]
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.$FUNC(f"...", ..., shell=True, ...)
+          - pattern: subprocess.$FUNC("..." + $X, ..., shell=True, ...)
+          - pattern: subprocess.$FUNC("..." % $X, ..., shell=True, ...)

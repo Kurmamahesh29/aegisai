@@ -1,0 +1,32 @@
+# Run `pre-commit install` once; hooks then run on every commit.
+# Hook versions are pinned; bump them deliberately after reviewing release notes.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+        exclude: ^(apps/vscode-extension/tsconfig\.json|examples/.*|packages/scanner/tests/.*)$
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.9
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+        files: ^packages/scanner/
+      - id: ruff-format
+        files: ^packages/scanner/
+
+  - repo: local
+    hooks:
+      - id: aegisai-self-scan
+        name: aegisai self scan (secrets + code)
+        entry: aegisai scan . --profile code --no-integrations --quiet --no-progress
+        language: system
+        pass_filenames: false
+        files: \.(py|yaml|yml|json|env|ts)$

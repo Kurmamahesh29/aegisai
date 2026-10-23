@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node / VS Code extension
+node_modules/
+apps/vscode-extension/out/
+apps/vscode-extension/*.vsix
+apps/vscode-extension/.vscode-test/
+
+# Reports and local state
+.aegisai-reports/
+aegis-baseline.json
+*.sarif
+!tests/**/*.sarif
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

@@ -1,0 +1,108 @@
+[build-system]
+requires = ["hatchling>=1.24,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aegisai"
+version = "0.1.0"
+description = "AegisAI - open-source security scanner for LLM, RAG, agent and MCP applications."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [{ name = "AegisAI contributors" }]
+keywords = ["security", "sast", "llm", "rag", "agents", "mcp", "devsecops"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed",
+]
+dependencies = [
+    "typer>=0.12,<1.0",
+    "pydantic>=2.7,<3.0",
+    "PyYAML>=6.0,<7.0",
+    "rich>=13.7,<15.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2,<9.0",
+    "pytest-cov>=5.0,<7.0",
+    "ruff>=0.5,<0.15",
+    "mypy>=1.10,<2.0",
+    "types-PyYAML>=6.0,<7.0",
+    "jsonschema>=4.21,<5.0",
+    "build>=1.2,<2.0",
+]
+
+[project.scripts]
+aegisai = "aegisai.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/aegisai/aegisai"
+Documentation = "https://github.com/aegisai/aegisai/tree/main/docs"
+Issues = "https://github.com/aegisai/aegisai/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aegisai"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/aegisai", "tests", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: end-to-end scans of example applications",
+    "external: requires an external scanner binary",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+extend-exclude = ["tests/fixtures", "../../examples"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "S", "N", "C4", "SIM", "RUF", "ANN"]
+ignore = [
+    "S101",   # assert is fine in tests and internal invariants
+    "S603",   # subprocess without shell is exactly what we want; reviewed manually
+    "S607",   # partial executable path: we resolve executables deliberately
+    "ANN401", # Any is sometimes required for AST / JSON handling
+    "RUF012", # mutable class attributes are used for ClassVar rule metadata
+    "S105",   # tests and rule tables contain secret-looking strings on purpose
+    "S106",
+    "S108",   # temp paths in tests
+    "E501",   # handled by formatter; long rule descriptions are allowed
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["aegisai", "conftest"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "ANN", "B011"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+show_error_codes = true
+files = ["src/aegisai"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["yaml", "yaml.*"]
+ignore_missing_imports = true

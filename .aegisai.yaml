@@ -1,0 +1,57 @@
+# AegisAI configuration for scanning this repository itself.
+version: 1
+
+scan:
+  profiles:
+    - all
+  exclude:
+    - .git/**
+    - .venv/**
+    - node_modules/**
+    - dist/**
+    - build/**
+    - out/**
+    - __pycache__/**
+    - .mypy_cache/**
+    - .pytest_cache/**
+    - .ruff_cache/**
+    - .aegisai-reports/**
+    # The example applications are intentionally vulnerable fixtures.
+    - examples/**
+    # Test fixtures contain deliberate secrets and vulnerable snippets.
+    - packages/scanner/tests/**
+  max_file_size_kb: 1024
+  timeout_seconds: 300
+
+rules:
+  disabled: []
+  overrides: {}
+
+report:
+  formats:
+    - terminal
+  output_dir: .aegisai-reports
+
+ci:
+  fail_on: high
+  strict_integrations: false
+
+integrations:
+  gitleaks:
+    enabled: true
+    required: false
+  osv_scanner:
+    enabled: true
+    required: false
+  semgrep:
+    enabled: false
+    config:
+      - rules/semgrep/python-ai-security.yaml
+
+ai_review:
+  enabled: false
+  provider: null
+  require_explicit_consent: true
+  redact_secrets: true
+
+suppressions: []
