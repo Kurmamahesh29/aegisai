@@ -329,3 +329,60 @@ def test_semgrep_without_config_is_skipped(tmp_path: Path) -> None:
     project = _project(tmp_path, {"a.py": "x\n"})
     outcome = SemgrepAnalyzer().run(project, SemgrepSettings(enabled=True, config=["p/ci"]), 30)
     assert outcome.result.status is AnalyzerStatus.SKIPPED and outcome.warnings
+
+
+def test_integration_findings_respect_scan_excludes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Gitleaks walks the whole root; findings in excluded paths must be dropped."""
+    (tmp_path / "examples").mkdir()
+    (tmp_path / "examples" / "fixture.py").write_text(
+        f'TOKEN = "{FAKE_SECRET}"\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(f'TOKEN = "{FAKE_SECRET}"\n', encoding="utf-8")
+    entries = [
+        {
+            "Description": "GitHub PAT",
+            "StartLine": 1,
+            "EndLine": 1,
+            "StartColumn": 9,
+            "EndColumn": 50,
+            "Match": "x",
+            "Secret": FAKE_SECRET,
+            "File": "examples/fixture.py",
+            "RuleID": "github-pat",
+        },
+        {
+            "Description": "GitHub PAT",
+            "StartLine": 1,
+            "EndLine": 1,
+            "StartColumn": 9,
+            "EndColumn": 50,
+            "Match": "x",
+            "Secret": FAKE_SECRET,
+            "File": "app.py",
+            "RuleID": "github-pat",
+        },
+    ]
+
+    def fake_run(args, **kwargs):
+        Path(args[args.index("--report-path") + 1]).write_text(
+            json.dumps(entries), encoding="utf-8"
+        )
+        return CommandResult(args=args, returncode=0, stdout="", stderr="", duration_ms=1)
+
+    monkeypatch.setattr(
+        gitleaks_mod, "resolve_executable", lambda name, explicit=None: str(tmp_path / "gitleaks")
+    )
+    monkeypatch.setattr(gitleaks_mod, "tool_version", lambda *a, **k: "v8")
+    monkeypatch.setattr(gitleaks_mod, "run_command", fake_run)
+    config = ScanConfiguration.model_validate(
+        {
+            "scan": {"exclude": ["examples/**"]},
+            "integrations": {"osv_scanner": {"enabled": False}},
+            "rules": {"disabled": ["SEC001"]},
+        }
+    )
+    result = scan_dir(tmp_path, config=config, no_integrations=False, profiles=[Profile.SECRETS])
+    assert [f.location.file_path for f in result.findings] == ["app.py"]
+    assert next(a for a in result.analyzers if a.name == "gitleaks").findings_count == 1

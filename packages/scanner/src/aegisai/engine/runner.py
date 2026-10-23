@@ -40,7 +40,7 @@ from aegisai.models.scan import (
 )
 from aegisai.rules import RULE_PRECEDENCE
 from aegisai.utils.logging import get_logger
-from aegisai.utils.paths import resolve_root
+from aegisai.utils.paths import PathMatcher, resolve_root
 
 log = get_logger("runner")
 
@@ -149,6 +149,10 @@ def run_scan(options: ScanOptions) -> ScanResult:
         )
     ]
     all_findings: list[Finding] = list(outcome.findings)
+    # External scanners walk the root themselves; apply the same exclusions to their findings.
+    exclusion_matcher = PathMatcher(
+        list(scan_section.exclude) + list(options.extra_excludes), scan_section.include
+    )
     skipped_rules: list[SkippedRule] = list(selection.skipped)
 
     for name, analyzer_cls in ALL_INTEGRATIONS.items():
@@ -173,7 +177,20 @@ def run_scan(options: ScanOptions) -> ScanResult:
             result = analyzer.run(project, settings, timeout)
         analyzers.append(result.result)
         warnings.extend(result.warnings)
-        all_findings.extend(result.findings)
+        kept = [
+            f
+            for f in result.findings
+            if not exclusion_matcher.is_excluded(f.location.file_path)
+            and exclusion_matcher.is_included(f.location.file_path)
+        ]
+        if len(kept) != len(result.findings):
+            log.debug(
+                "%s: dropped %d finding(s) in excluded paths",
+                name,
+                len(result.findings) - len(kept),
+            )
+            result.result.findings_count = len(kept)
+        all_findings.extend(kept)
         if result.result.status is not AnalyzerStatus.COMPLETED:
             for rule in registry:
                 if rule.metadata.requires_integration == name and rule in selection.rules:
