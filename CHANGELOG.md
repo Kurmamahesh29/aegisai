@@ -6,6 +6,8 @@ All notable changes to AegisAI are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-23
+
 ### Fixed
 - SEC002/LLM003 false positives: a secret passed to a request, query, command or arbitrary
   helper no longer taints the call's result (e.g. logging `resp.status_code` after

@@ -2,7 +2,7 @@
   "name": "aegisai-security",
   "displayName": "AegisAI Security",
   "description": "Security scanner for LLM, RAG, agent and MCP applications. Runs the local AegisAI CLI and shows findings inline.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "aegisai",
   "license": "Apache-2.0",
   "repository": {
@@ -152,19 +152,37 @@
         },
         "aegisai.profile": {
           "type": "string",
-          "enum": ["all", "ai", "llm", "agents", "rag", "mcp", "code", "secrets", "dependencies"],
+          "enum": [
+            "all",
+            "ai",
+            "llm",
+            "agents",
+            "rag",
+            "mcp",
+            "code",
+            "secrets",
+            "dependencies"
+          ],
           "default": "all",
           "description": "Scan profile."
         },
         "aegisai.severityThreshold": {
           "type": "string",
-          "enum": ["informational", "low", "medium", "high", "critical"],
+          "enum": [
+            "informational",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
           "default": "informational",
           "description": "Only report findings at or above this severity."
         },
         "aegisai.exclude": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Additional glob patterns to exclude (passed as --exclude)."
         },
@@ -181,7 +199,9 @@
         },
         "aegisai.extraArgs": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Additional CLI arguments appended to every scan (advanced)."
         },
