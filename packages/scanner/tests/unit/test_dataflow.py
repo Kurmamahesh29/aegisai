@@ -305,3 +305,47 @@ def test_descriptive_secret_names_are_not_secrets() -> None:
         assert not is_secret_name(name), name
     for name in ("access_token", "client_secret", "db_password", "api_key"):
         assert is_secret_name(name), name
+    # The secret word must end the name: "expected_token_use" describes a token, not a secret.
+    assert not is_secret_name("expected_token_use")
+
+
+def test_destructive_call_heuristic_uses_whole_words() -> None:
+    from aegisai.analyzers.dataflow import is_destructive_call
+
+    assert is_destructive_call("requests.delete", "delete")
+    assert is_destructive_call("db.drop_table", "drop_table")
+    assert not is_destructive_call("langgraph.config.get_stream_writer", "get_stream_writer")
+    assert not is_destructive_call("langchain_core.messages.RemoveMessage", "RemoveMessage")
+
+
+def test_path_constructor_is_not_a_sink_but_path_operations_are() -> None:
+    result = analyze(
+        """
+        from pathlib import Path
+        from langchain_core.tools import tool
+
+        @tool
+        def a(name: str) -> str:
+            p = Path(name)
+            return str(p)
+
+        @tool
+        def b(name: str) -> str:
+            return Path(name).read_text()
+        """
+    )
+    by_function = {
+        f.function.name
+        for f in result.flows_matching({SourceKind.TOOL_PARAM}, {SinkKind.FILE_PATH})
+    }
+    assert by_function == {"b"}
+
+
+def test_yaml_loader_classification() -> None:
+    from aegisai.analyzers.dataflow import is_unsafe_yaml_loader
+
+    assert is_unsafe_yaml_loader("yaml.Loader")
+    assert is_unsafe_yaml_loader("yaml.FullLoader")
+    assert not is_unsafe_yaml_loader("yaml.SafeLoader")
+    assert not is_unsafe_yaml_loader("yaml.BaseLoader")
+    assert not is_unsafe_yaml_loader("_FrontmatterLoader")

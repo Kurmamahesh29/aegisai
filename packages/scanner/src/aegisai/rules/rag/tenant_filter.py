@@ -11,9 +11,11 @@ from aegisai.engine.registry import FileContext, Rule
 from aegisai.models.finding import Category, Confidence, Evidence, Finding, Severity
 from aegisai.models.rule import ArtifactType, RuleMetadata, RulePack
 
+# Whole-word match so that e.g. "_read_workspace_file" or "subscriber" do not count.
 TENANT_IDENTIFIER = re.compile(
-    r"(?i)(tenant|user_id|userid|org_id|organization|organisation|account_id|customer_id|"
-    r"workspace|current_user|owner_id|group_id|team_id|principal)"
+    r"(?i)(?<![a-z])(tenant|tenant_id|user_id|userid|org_id|organization|organisation|"
+    r"account_id|customer_id|workspace_id|current_user|owner_id|group_id|team_id|principal)"
+    r"(?![a-z])"
 )
 FILTER_KEYWORDS = {
     "filter",
@@ -94,6 +96,9 @@ class MissingTenantFilterRule(Rule):
                 )
                 is_as_retriever = call.tail == "as_retriever"
                 if not (is_retrieval or is_as_retriever):
+                    continue
+                if call.tail in {"get", "fetch"}:
+                    # Point lookups by id are not similarity searches; tenant scoping is implicit.
                     continue
                 node = call.node
                 if any(k.arg in FILTER_KEYWORDS for k in node.keywords):

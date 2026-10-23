@@ -177,7 +177,7 @@ def test_cfg001_python_patterns(project) -> None:
     assert "DEBUG = True" in summaries
     assert 'ALLOWED_HOSTS = ["*"]' in summaries
     assert "TLS certificate verification disabled (verify=False)" in summaries
-    assert "yaml.load without SafeLoader" in summaries
+    assert "yaml.load without a safe Loader" in summaries
     assert "unverified SSL context" in summaries
     assert "debug=True in application run()" in summaries
     assert len(found) == 6
@@ -216,3 +216,18 @@ def test_cfg001_negative(project) -> None:
     """
     result = scan_code(project, code, profiles=[Profile.CODE])
     assert "CFG001" not in rule_ids(result)
+
+
+def test_cfg001_custom_and_base_yaml_loaders_are_safe(project) -> None:
+    code = """
+        import yaml
+
+        class _FrontmatterLoader(yaml.SafeLoader):
+            pass
+
+        a = yaml.load(open("a.yaml"), Loader=_FrontmatterLoader)
+        b = yaml.load(open("b.yaml"), Loader=yaml.BaseLoader)
+        c = yaml.load(open("c.yaml"), Loader=yaml.FullLoader)
+    """
+    found = findings_for(scan_code(project, code, profiles=[Profile.CODE]), "CFG001")
+    assert [f.location.start_line for f in found] == [8]

@@ -6,6 +6,7 @@ import ast
 from typing import Any
 
 from aegisai.analyzers.configuration import iter_scalars, locate_path
+from aegisai.analyzers.dataflow import is_unsafe_yaml_loader
 from aegisai.analyzers.python_ast import (
     constant_value,
     dotted_name,
@@ -149,10 +150,10 @@ class UnsafeConfigurationRule(Rule):
                         node.args[1] if len(node.args) > 1 else None
                     )
                     loader_name = dotted_name(loader) if loader is not None else ""
-                    if not loader_name or "Safe" not in loader_name:
+                    if loader is None or is_unsafe_yaml_loader(loader_name):
                         report(
                             node,
-                            "yaml.load without SafeLoader",
+                            "yaml.load without a safe Loader",
                             Severity.HIGH,
                             "Use yaml.safe_load() or Loader=yaml.SafeLoader.",
                             "CWE-502",

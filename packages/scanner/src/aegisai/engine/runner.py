@@ -11,6 +11,7 @@ from pathlib import Path
 from aegisai import __version__
 from aegisai.discovery.project import build_project_context
 from aegisai.engine.baseline import apply_baseline, load_baseline
+from aegisai.engine.context import apply_context_adjustments
 from aegisai.engine.deduplication import apply_precedence, deduplicate
 from aegisai.engine.execution import Deadline, execute_rules
 from aegisai.engine.filtering import (
@@ -203,6 +204,7 @@ def run_scan(options: ScanOptions) -> ScanResult:
 
     # Normalisation pipeline.
     all_findings = apply_overrides(all_findings, effective)
+    all_findings = apply_context_adjustments(all_findings, scan_section)
     all_findings = filter_by_confidence(all_findings, scan_section.min_confidence)
     all_findings = apply_precedence(all_findings, RULE_PRECEDENCE)
     all_findings = deduplicate(all_findings)

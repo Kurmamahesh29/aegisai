@@ -65,7 +65,7 @@ class AuthorizationAfterRetrievalRule(Rule):
                     name = module.call_name(call) or ""
                     tail = attribute_tail(call.func) or ""
                     receiver = receiver_name(call.func)
-                    if _FunctionAnalyzer._is_retrieval_call(
+                    if tail not in {"get", "fetch"} and _FunctionAnalyzer._is_retrieval_call(
                         name, tail, module.resolve(receiver) if receiver else None
                     ):
                         if any(
@@ -107,9 +107,7 @@ class AuthorizationAfterRetrievalRule(Rule):
                 elif isinstance(node, ast.If):
                     tests.append(node.test)
                 for test in tests:
-                    if _references(test, result_names | iter_names) and AUTH_TERM.search(
-                        ast.dump(test)
-                    ):
+                    if _references(test, result_names | iter_names) and _auth_identifier_in(test):
                         end_line, end_col = node_end(node)
                         node_line = int(getattr(node, "lineno", 1))
                         node_col = int(getattr(node, "col_offset", 0)) + 1
@@ -148,3 +146,17 @@ class AuthorizationAfterRetrievalRule(Rule):
 
 def _references(node: ast.AST, names: set[str]) -> bool:
     return any(isinstance(child, ast.Name) and child.id in names for child in ast.walk(node))
+
+
+def _auth_identifier_in(node: ast.AST) -> bool:
+    """True when a variable or attribute *name* in the test looks authorization-related.
+
+    String constants are ignored on purpose: ``"user_id" in payload`` is a key check, not an
+    authorization comparison against the caller's identity.
+    """
+    for child in ast.walk(node):
+        if isinstance(child, ast.Name) and AUTH_TERM.search(child.id):
+            return True
+        if isinstance(child, ast.Attribute) and AUTH_TERM.search(child.attr):
+            return True
+    return False

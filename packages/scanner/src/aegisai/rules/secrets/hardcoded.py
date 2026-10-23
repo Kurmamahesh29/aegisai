@@ -94,7 +94,10 @@ class HardcodedCredentialsRule(Rule):
                         ),
                     ],
                     evidence_summary=f"{label} = {masked}",
-                    confidence=Confidence.HIGH if match.confidence == "high" else Confidence.MEDIUM,
+                    confidence={"high": Confidence.HIGH, "low": Confidence.LOW}.get(
+                        match.confidence, Confidence.MEDIUM
+                    ),
+                    severity=Severity.LOW if match.confidence == "low" else None,
                     title=f"Potential hard-coded credential ({label})",
                     analyzer="secrets",
                     fingerprint_material=f"{label}:{masked}",

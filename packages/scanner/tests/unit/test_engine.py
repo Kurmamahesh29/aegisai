@@ -288,3 +288,29 @@ def test_json_report_never_contains_absolute_paths_in_findings(project) -> None:
     result = scan_dir(root, profiles=[Profile.CODE])
     payload = json.loads(result.model_dump_json())
     assert payload["findings"][0]["location"]["file_path"] == "app.py"
+
+
+def test_test_and_example_paths_are_downgraded(project) -> None:
+    from aegisai.engine.context import classify_path
+
+    assert classify_path("tests/unit/test_x.py") == "test"
+    assert classify_path("src/app_test.py") == "test"
+    assert classify_path("pkg/conftest.py") == "test"
+    assert classify_path("web/src/model.test.ts") == "test"
+    assert classify_path(".env.test") == "test"
+    assert classify_path("examples/demo/app.py") == "example"
+    assert classify_path("docs/config.md") == "example"
+    assert classify_path("src/app.py") is None
+    assert classify_path("src/attestation.py") is None  # "test" inside a word does not count
+
+    root = project({"tests/test_app.py": VULNERABLE, "app.py": VULNERABLE})
+    result = scan_dir(root, profiles=[Profile.CODE])
+    by_path = {f.location.file_path: f for f in findings_for(result, "SEC003")}
+    assert by_path["app.py"].severity is Severity.CRITICAL
+    assert by_path["tests/test_app.py"].severity is Severity.HIGH
+    assert by_path["tests/test_app.py"].review_required
+    assert "context:test" in by_path["tests/test_app.py"].tags
+
+    config = ScanConfiguration.model_validate({"scan": {"downgrade_test_paths": False}})
+    result2 = scan_dir(root, profiles=[Profile.CODE], config=config)
+    assert all(f.severity is Severity.CRITICAL for f in findings_for(result2, "SEC003"))

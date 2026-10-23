@@ -96,6 +96,17 @@ class ScanSection(BaseModel):
     min_confidence: Confidence = Field(
         default=Confidence.LOW, description="Discard findings below this confidence."
     )
+    downgrade_test_paths: bool = Field(
+        default=True,
+        description=(
+            "Lower severity by one step and mark findings in test, fixture, example and docs "
+            "paths as review-required (they are usually dummy data)."
+        ),
+    )
+    test_path_patterns: list[str] = Field(
+        default_factory=list,
+        description="Extra globs treated as test/example paths in addition to the built-in set.",
+    )
 
     @field_validator("profiles")
     @classmethod

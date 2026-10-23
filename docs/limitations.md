@@ -73,6 +73,30 @@ precision or recall. Five false positives found during development (four on the 
 examples, one on this repository's own `package-lock.json`) were fixed and are locked in
 `tests/regression/test_false_positives.py`.
 
+## Measured on open-source repositories (0.1.2)
+
+Shallow clones of six public AI repositories were scanned with built-in rules only
+(`--no-integrations`), before and after the precision work in 0.1.2. "Before" is 0.1.1.
+
+| Repository | Files | Findings before | Findings after | Notes on what remains |
+|------------|-------|-----------------|----------------|-----------------------|
+| modelcontextprotocol/servers | 325 | 1 | 0 | TypeScript servers; only regex heuristics apply |
+| openai/openai-agents-python | 1660 | 351 | 141 | 99 x AGT003 for the SDK's own `ShellTool`/`CodeInterpreterTool` examples (downgraded to medium), docs placeholders, one real SEC003 in `examples/tools/shell.py` |
+| jlowin/fastmcp | 1127 | 410 | 160 | mostly MCP004/MCP005 review items on example servers, SEC001 in tests (medium, `context:test`), AGT004 in client tests |
+| langchain-ai/langgraph | 616 | 18 | 25 | SEC001 on documentation connection strings; AGT002 informational in tests |
+| crewAIInc/crewAI | 2402 | 112 | 31 | SEC001 on `.env.test` and CLI label maps |
+| mem0ai/mem0 | 1342 | 139 | 50 | SEC001 on demo keys in docs/integrations, RAG004 review items |
+
+Observations that drove the 0.1.2 changes: over 90% of 0.1.1 SEC001 findings were fixture
+values in tests; `get_context()` and key/value `.get()` were mis-classified as retrieval;
+`Path(x)` construction and `get_stream_writer` were mis-classified as sinks/destructive calls;
+custom YAML loaders were flagged. The remaining findings are dominated by review-required
+heuristics (AGT002, MCP004, MCP005, AGT004) on example code, which is accurate but noisy; a
+future release will let a profile exclude heuristic rules.
+
+Precision was judged by reading samples, not by a labelled ground truth; treat the numbers as
+indicative.
+
 ## Platform and tooling
 
 - Python 3.12+ is required (uses `tomllib`, `StrEnum`, PEP 604 unions).

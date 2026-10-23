@@ -135,3 +135,25 @@ def test_rag004_negative(project) -> None:
             return {"ids": results["ids"], "scores": results["distances"]}
     """
     assert "RAG004" not in rule_ids(scan_code(project, code, profiles=RAG))
+
+
+def test_rag001_and_rag002_ignore_point_lookups_and_key_checks(project) -> None:
+    """Open-source false positives: dict/vector .get() by id and string-key membership tests."""
+    code = """
+        _VECTOR_DESCRIPTIONS = {"chroma": "local"}
+
+        def _setup(user_id, vector_store):
+            desc = _VECTOR_DESCRIPTIONS.get("chroma")
+            return desc
+
+        def get_or_create_user_id(vector_store, user_id):
+            existing = vector_store.get(vector_id=user_id)
+            if existing and "user_id" in existing.payload:
+                return existing.payload["user_id"]
+            return user_id
+
+        def _workspace_entry(_index_gitlinks, _read_workspace_file):
+            return _index_gitlinks.get("x")
+    """
+    ids = rule_ids(scan_code(project, code, profiles=RAG))
+    assert "RAG001" not in ids and "RAG002" not in ids

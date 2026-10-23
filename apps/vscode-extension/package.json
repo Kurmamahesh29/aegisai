@@ -2,7 +2,7 @@
   "name": "aegisai-security",
   "displayName": "AegisAI Security",
   "description": "Security scanner for LLM, RAG, agent and MCP applications. Runs the local AegisAI CLI and shows findings inline.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "aegisai",
   "license": "Apache-2.0",
   "repository": {

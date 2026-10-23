@@ -63,3 +63,51 @@ def test_secret_scanner_detects_and_skips_placeholders() -> None:
     assert lines == [1, 2]
     assert matches[0].key == "OPENAI_API_KEY"
     assert matches[0].confidence == "high"
+
+
+def test_secret_scanner_ignores_fixture_values_and_references() -> None:
+    """Patterns observed on open-source repositories that are not credentials."""
+    text = "\n".join(
+        [
+            'ANTHROPIC_API_KEY = "fake-anthropic-key-12345"',
+            'access_token = "synthetic-access-token-1"',
+            'access_token = "TOKEN_A_ORIGINAL"',
+            'client_secret = "my-client-secret"',
+            'jwt_signing_key = "replace-with-your-own-key"',
+            'OPENAI_API_KEY = "fixture-openai"',
+            'JWT_BEARER_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer"',
+            'OPENAI_API_KEY_SOURCE = "fixture-openai-source"',
+            "# Tokens: `GITHUB_TOKEN` files and comments",
+            'SUPABASE_PUBLIC_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.abcdefghijklmnop"',
+            'regex = """private_key = (?i)-----BEGIN [A-Z ]*PRIVATE KEY-----"""',
+            'streaming-tokens-without-langchain = "https://docs.example.com/how-to/streaming-tokens"',
+        ]
+    )
+    assert scan_text_for_secrets(text) == []
+
+
+def test_secret_scanner_still_catches_real_shapes() -> None:
+    text = "\n".join(
+        [
+            # Deliberately not shaped like a real provider token (GitHub push protection).
+            'STAGING_SECRET_ACCESS_KEY = "Zq9kLm2p0Xy7Rt4vB1cE5hJ7.kM0oS"',
+            'password = "Schr0dinger!Cat42"',
+            'DATABASE_URL = "postgres://app:Zq9kLm2p0Xy7Rt4v@db.internal:5432/app"',
+        ]
+    )
+    matches = scan_text_for_secrets(text)
+    assert [m.line for m in matches] == [1, 2, 3]
+    assert matches[2].detector == "url_credentials" and matches[2].value == "Zq9kLm2p0Xy7Rt4v"
+
+
+def test_secret_scanner_labels_default_urls_and_public_keys() -> None:
+    text = "\n".join(
+        [
+            '"ANTHROPIC_API_KEY": "Anthropic",',
+            'DB = "postgresql://postgres:postgres@localhost:5432/db"',
+            'DB2 = "postgresql://app:password@localhost:5432/db"',
+            'POSTHOG_API_KEY = "phc_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJK"',
+        ]
+    )
+    matches = scan_text_for_secrets(text)
+    assert [(m.line, m.confidence) for m in matches] == [(4, "low")]

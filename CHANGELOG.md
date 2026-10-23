@@ -6,6 +6,33 @@ All notable changes to AegisAI are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-23
+
+Precision improvements measured on six open-source AI repositories (MCP reference servers,
+OpenAI Agents SDK, FastMCP, LangGraph, CrewAI, mem0).
+
+### Added
+- Findings in test, fixture, example and docs paths are downgraded one severity step, marked
+  review-required and tagged `context:test` / `context:example` (`scan.downgrade_test_paths`,
+  `scan.test_path_patterns`).
+- Credentials embedded in URLs (`postgres://user:pass@host`) are reported by SEC001.
+- Execution sinks named "sandbox" are reported one severity step lower with review required.
+
+### Fixed
+- SEC001 no longer reports fixture-style values ("fake-...", "synthetic-...", "TOKEN_A",
+  "my-client-secret"), variable-name references ("GITHUB_TOKEN"), URLs/URNs, or regular
+  expressions from scanner configs; keys ending in `_type`, `_source`, `_grant` or containing
+  `public`/`tokens` are ignored.
+- Dataflow: secret names must end with the secret word (`expected_token_use` is not a secret);
+  `get_context()` is no longer treated as retrieval; key/value stores are not vector stores.
+- AGT002/MCP004: destructive-call heuristic matches whole words (`get_stream_writer` is not a
+  write) and ignores message/event constructors.
+- AGT001/MCP001: constructing `Path(x)` is no longer a filesystem sink; operations on the
+  path (`read_text`, `open`, `unlink`, `mkdir`, ...) are.
+- CFG001 and the deserialization sink accept `yaml.BaseLoader` and custom loader classes;
+  only `Loader`, `FullLoader` and `UnsafeLoader` are flagged.
+- RAG001/RAG002 ignore point lookups (`.get()` / `.fetch()`) and string-key membership tests.
+
 ## [0.1.1] - 2026-10-23
 
 ### Fixed

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from aegisai.analyzers.dataflow import SinkKind, TaintFlow
+from aegisai.analyzers.dataflow import SinkKind, SinkMatch, TaintFlow
 from aegisai.analyzers.python_ast import node_end
 from aegisai.engine.registry import FileContext, Rule
 from aegisai.models.finding import Confidence, Evidence, Finding, Severity
@@ -85,6 +85,17 @@ def flow_evidence(flow: TaintFlow) -> list[Evidence]:
     return evidence
 
 
+_SANDBOX_DOWNGRADE: dict[Severity, Severity] = {
+    Severity.CRITICAL: Severity.HIGH,
+    Severity.HIGH: Severity.MEDIUM,
+}
+
+
+def is_sandboxed(sink: SinkMatch) -> bool:
+    """True when the sink callee is a sandbox/isolated-execution provider by name."""
+    return "sandbox" in sink.callee.lower()
+
+
 def has_strong_guard(flow: TaintFlow) -> bool:
     """True when an allow-list membership or equality check constrains the tainted value.
 
@@ -125,6 +136,15 @@ def finding_from_flow(
     )
     if flow.guards:
         summary += f"; {len(flow.guards)} validation-looking check(s) present"
+    extra_tags = list(tags)
+    if is_sandboxed(sink):
+        # Execution through something named "sandbox" is still worth a look, but it is a
+        # deliberate design rather than an accidental injection path.
+        summary += "; sink is a sandbox provider"
+        severity = _SANDBOX_DOWNGRADE.get(severity, severity)
+        confidence = Confidence.MEDIUM if confidence is Confidence.HIGH else confidence
+        review_required = True
+        extra_tags.append("sandboxed")
     return ctx.new_finding(
         rule,
         line=sink.line,
@@ -138,7 +158,7 @@ def finding_from_flow(
         title=title,
         description=description,
         review_required=review_required,
-        tags=tags,
+        tags=extra_tags,
         analyzer="dataflow",
         fingerprint_material=f"{flow.source.kind.value}:{flow.source.label}:{sink.kind.value}:{flow.snippet}",
     )

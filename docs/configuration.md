@@ -22,6 +22,9 @@ scan:
   timeout_seconds: 300           # whole scan; remaining files are skipped and reported
   follow_symlinks: false         # in-root symlinks only; escaping links are never followed
   min_confidence: low            # discard findings below this confidence
+  downgrade_test_paths: true     # tests/, fixtures/, examples/, docs/, test_*.py, *.test.ts ...:
+                                 # severity lowered one step, review_required, tag context:test
+  test_path_patterns: []         # extra globs treated as test paths
 
 rules:
   disabled: [RAG002]             # rule ids

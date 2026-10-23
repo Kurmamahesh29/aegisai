@@ -228,7 +228,7 @@ SECRET_NAME = re.compile(
     r"(?i)(?:^|[_\-.])(?:api[_\-]?key|apikey|secret|passw(?:or)?d|passwd|private[_\-]?key|"
     r"access[_\-]?token|auth[_\-]?token|refresh[_\-]?token|bearer[_\-]?token|id[_\-]?token|"
     r"client[_\-]?secret|credentials?|service[_\-]?key|signing[_\-]?key|encryption[_\-]?key|"
-    r"master[_\-]?key|session[_\-]?key|secret[_\-]?key|token|api[_\-]?secret|pwd)(?:$|[_\-.])"
+    r"master[_\-]?key|session[_\-]?key|secret[_\-]?key|token|api[_\-]?secret|pwd)$"
 )
 SECRET_NAME_EXCLUDE = re.compile(
     r"(?i)(max_tokens|num_tokens|token_count|tokens?_used|tokenizer|token_limit|token_type|"
@@ -241,6 +241,21 @@ SECRET_NAME_EXCLUDE = re.compile(
     r"_(?:url|uri|endpoint|path|file|name|id|type|header|field|len|length|count|size|ttl|"
     r"expiry|expires|lifetime|format|version|label|prefix|param|key_name|env|var)$)"
 )
+
+
+UNSAFE_YAML_LOADERS = frozenset(
+    {"Loader", "FullLoader", "UnsafeLoader", "CLoader", "CFullLoader", "CUnsafeLoader"}
+)
+
+
+def is_unsafe_yaml_loader(loader_name: str) -> bool:
+    """True for PyYAML loaders that construct arbitrary Python objects.
+
+    ``SafeLoader``, ``BaseLoader`` and custom loader classes (usually SafeLoader subclasses)
+    are treated as safe; only the documented unsafe loaders are flagged.
+    """
+    tail = loader_name.rsplit(".", 1)[-1]
+    return tail in UNSAFE_YAML_LOADERS
 
 
 def is_secret_name(name: str) -> bool:
@@ -339,7 +354,6 @@ RETRIEVAL_FUNCTIONS = {
     "retrieve_documents",
     "retrieve_context",
     "retrieve_docs",
-    "get_context",
     "search_documents",
     "search_knowledge_base",
     "query_index",
@@ -595,8 +609,6 @@ _FILE_NAMES = {
     "shutil.copy",
     "shutil.copyfile",
     "shutil.copytree",
-    "pathlib.Path",
-    "Path",
     "aiofiles.open",
     "flask.send_file",
     "send_file",
@@ -606,7 +618,23 @@ _FILE_NAMES = {
     "tarfile.open",
     "os.path.join",
 }
-_FILE_TAILS = {"read_text", "write_text", "read_bytes", "write_bytes", "unlink", "rmdir"}
+_FILE_TAILS = {
+    "read_text",
+    "write_text",
+    "read_bytes",
+    "write_bytes",
+    "unlink",
+    "rmdir",
+    "mkdir",
+    "rename",
+    "replace",
+    "open",
+    "iterdir",
+    "glob",
+    "rglob",
+    "touch",
+    "chmod",
+}
 _NETWORK_NAMES = {
     "requests.get",
     "requests.post",
@@ -729,12 +757,24 @@ _RESPONSE_NAMES = {
     "flask.make_response",
     "make_response",
 }
+# Whole-word match: "get_stream_writer" must not match "write", "RemoveMessage" is excluded below.
 DESTRUCTIVE_CALL = re.compile(
-    r"(?i)(delete|remove|drop|truncate|destroy|purge|wipe|send_email|send_mail|sendmail|"
-    r"send_message|transfer|payment|charge|refund|withdraw|deploy|kill|terminate|shutdown|"
-    r"reboot|chmod|chown|rmtree|unlink|grant|revoke|write|update|insert|create_user|"
-    r"set_password|reset_password|publish|post_|upload|overwrite|format_disk)"
+    r"(?i)(?<![a-z])(delete|remove|drop|truncate|destroy|purge|wipe|send_email|send_mail|"
+    r"sendmail|send_message|transfer|payment|charge|refund|withdraw|deploy|kill|terminate|"
+    r"shutdown|reboot|chmod|chown|rmtree|unlink|grant|revoke|write|update|insert|create_user|"
+    r"set_password|reset_password|publish|post_|upload|overwrite|format_disk)(?![a-z])"
 )
+_NON_DESTRUCTIVE_CALL_SUFFIX = ("Message", "Event", "Handler", "Writer", "Callback", "Error")
+_NON_DESTRUCTIVE_CALL_PREFIX = ("langchain_core.messages", "langgraph.config", "langgraph.types")
+
+
+def is_destructive_call(name: str, tail: str) -> bool:
+    """Heuristic: does a call name denote an irreversible or side-effecting operation?"""
+    if tail.endswith(_NON_DESTRUCTIVE_CALL_SUFFIX) or name.startswith(_NON_DESTRUCTIVE_CALL_PREFIX):
+        return False
+    return DESTRUCTIVE_CALL.search(tail) is not None
+
+
 IGNORED_PARAMS = {
     "self",
     "cls",
@@ -1537,9 +1577,7 @@ class _FunctionAnalyzer:
         if receiver and tail in RETRIEVAL_TAILS and RECV_RETRIEVAL.search(receiver):
             return not (
                 tail in {"get", "fetch"}
-                and not re.search(
-                    r"(?i)(collection|index|vector|store|retriev|kb|knowledge)", receiver
-                )
+                and not re.search(r"(?i)(collection|index|vector|retriev|kb|knowledge)", receiver)
             )
         return bool(
             receiver and tail in {"invoke", "ainvoke"} and re.search(r"(?i)retriev", receiver)
@@ -1662,7 +1700,7 @@ class _FunctionAnalyzer:
                 if loader is None and len(node.args) > 1:
                     loader = node.args[1]
                 loader_name = dotted_name(loader) if loader is not None else ""
-                if "Safe" in loader_name or "safe" in loader_name:
+                if loader is not None and not is_unsafe_yaml_loader(loader_name):
                     return matched
             report(SinkKind.DESERIALIZATION, selected(("arg0", "data", "stream", "file", "f")))
         elif (
@@ -1750,8 +1788,6 @@ class _FunctionAnalyzer:
             report(SinkKind.TOOL_INVOCATION, all_args())
         elif name in _RESPONSE_NAMES or tail in {"jsonify", "JSONResponse", "make_response"}:
             report(SinkKind.HTTP_RESPONSE, all_args())
-        elif name in {"Path", "pathlib.Path"}:
-            report(SinkKind.FILE_PATH, all_args())
         return matched
 
     def _note_call_markers(self, name: str, tail: str, node: ast.Call) -> None:
@@ -1847,7 +1883,7 @@ def function_is_high_impact(info: FunctionInfo) -> tuple[bool, str]:
     if dangerous:
         return True, "performs " + ", ".join(sorted(dangerous))
     for call in info.calls:
-        if DESTRUCTIVE_CALL.search(call.tail) and call.tail not in {
+        if is_destructive_call(call.name, call.tail) and call.tail not in {
             "update",
             "insert",
             "write",
