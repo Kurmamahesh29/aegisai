@@ -1,0 +1,12 @@
+# Normalise line endings to LF in the repository and on checkout (matches .editorconfig).
+* text=auto eol=lf
+
+# Windows scripts need CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets.
+*.png binary
+*.vsix binary
+*.whl binary
