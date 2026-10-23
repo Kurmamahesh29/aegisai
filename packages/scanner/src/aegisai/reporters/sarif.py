@@ -94,7 +94,7 @@ def build_sarif(result: ScanResult, rules: list[RuleMetadata]) -> dict[str, Any]
                 "name": result.metadata.tool_name,
                 "version": result.metadata.tool_version,
                 "semanticVersion": result.metadata.tool_version,
-                "informationUri": "https://github.com/aegisai/aegisai",
+                "informationUri": "https://github.com/Kurmamahesh29/aegisai",
                 "rules": rule_objects,
             }
         },

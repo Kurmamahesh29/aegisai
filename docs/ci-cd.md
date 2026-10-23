@@ -22,7 +22,7 @@ permissions:
   contents: read
 jobs:
   scan:
-    uses: aegisai/aegisai/.github/workflows/aegisai-scan.yml@v0.1.0
+    uses: Kurmamahesh29/aegisai/.github/workflows/aegisai-scan.yml@v0.1.0
     with:
       profile: all
       fail-on: high

@@ -46,9 +46,9 @@ dev = [
 aegisai = "aegisai.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/aegisai/aegisai"
-Documentation = "https://github.com/aegisai/aegisai/tree/main/docs"
-Issues = "https://github.com/aegisai/aegisai/issues"
+Homepage = "https://github.com/Kurmamahesh29/aegisai"
+Documentation = "https://github.com/Kurmamahesh29/aegisai/tree/main/docs"
+Issues = "https://github.com/Kurmamahesh29/aegisai/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aegisai"]

@@ -48,7 +48,7 @@ aegisai doctor                           # shows which external scanners are ava
 From source:
 
 ```bash
-git clone https://github.com/aegisai/aegisai
+git clone https://github.com/Kurmamahesh29/aegisai
 cd aegisai
 python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -e "packages/scanner[dev]"
