@@ -53,7 +53,7 @@ This page lists what the 0.1.0 release cannot do, what it gets wrong, and how it
 | MCP002 | Config files for internal, trusted-only servers | Permissions expressed in client-specific keys not on the list |
 | MCP004 | Servers authenticated by a reverse proxy | Tools whose impact is not recognisable from calls or names |
 | MCP005 | Containers that must bind 0.0.0.0 behind a network policy | Bindings configured through environment variables |
-| DEP001 | Advisory severity may be missing (reported medium, review required) | Manifests OSV-Scanner does not support (`Pipfile`, `package.json` without lockfile) |
+| DEP001 | Advisory severity may be missing (reported medium, review required) | Manifests OSV-Scanner does not support (`pyproject.toml`, `Pipfile`, `package.json` without a lockfile); these are listed as warnings |
 
 ## Measured detection on the fixture corpus (0.1.0)
 

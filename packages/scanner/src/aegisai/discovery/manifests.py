@@ -28,7 +28,7 @@ OSV_SUPPORTED_MANIFESTS: frozenset[str] = frozenset(
         "Gemfile.lock",
         "pom.xml",
         "composer.lock",
-        "pyproject.toml",
+        # pyproject.toml is a manifest, not a lockfile: OSV-Scanner has no extractor for it.
     }
 )
 

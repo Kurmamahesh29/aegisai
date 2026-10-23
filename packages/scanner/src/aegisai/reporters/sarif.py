@@ -126,6 +126,8 @@ def _rule_object(rule_id: str, meta: RuleMetadata | None) -> dict[str, Any]:
         return {"id": rule_id, "name": rule_id, "shortDescription": {"text": rule_id}}
     tags = [meta.category.value, meta.pack.value, "security", *meta.tags]
     tags.extend(f"external/cwe/{cwe.lower()}" for cwe in meta.cwe_ids)
+    # GitHub code scanning rejects SARIF when a rule's tags contain duplicates.
+    tags = list(dict.fromkeys(tags))
     obj: dict[str, Any] = {
         "id": meta.rule_id,
         "name": meta.name.replace(" ", ""),

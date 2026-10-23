@@ -122,7 +122,7 @@ jobs:
           path: aegisai-reports/
       - name: Upload SARIF
         if: always() && inputs.upload-sarif && steps.scan.outputs.exit_code != '2'
-        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           sarif_file: aegisai-reports/report.sarif
           category: aegisai

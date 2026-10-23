@@ -60,6 +60,9 @@ def test_sarif_structure(project) -> None:
     assert driver["name"] == "AegisAI" and driver["version"]
     rule_ids = [r["id"] for r in driver["rules"]]
     assert len(rule_ids) == len(set(rule_ids)) >= 23
+    for rule in driver["rules"]:
+        tags = rule["properties"]["tags"]
+        assert len(tags) == len(set(tags)), f"duplicate tags in {rule['id']}: {tags}"
     assert run["originalUriBaseIds"]["%SRCROOT%"]["uri"].startswith("file:///")
     results = run["results"]
     assert len(results) == 2
